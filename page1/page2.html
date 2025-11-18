@@ -87,12 +87,120 @@
 </button>
 </div>
 </header>
-<main class="flex-2">
-<h1>上傳檔案</h1>
-<form method="post" enctype="multipart/form-data" action="/upload">
-    <input type="file" name="file"><br>
-    <input type="submit" value="上傳檔案">
-</form>
+<main class="px-6 md:px-10 lg:px-20 py-8">
+  <section class="max-w-4xl mx-auto">
+    <h3 class="text-2xl font-bold mb-4">我的衣櫃 — 上傳衣物</h3>
+
+    <form id="uploadForm" class="flex flex-col gap-4" onsubmit="return false;">
+      <div class="flex flex-wrap gap-3 items-center">
+        <input id="itemName" type="text" placeholder="衣物名稱（選填）" class="px-3 py-2 border rounded-md w-40 bg-white dark:bg-secondary-dark/80" />
+        <select id="itemCategory" class="px-3 py-2 border rounded-md w-40 bg-white dark:bg-secondary-dark/80">
+          <option value="top">上衣</option>
+          <option value="bottom">下身</option>
+          <option value="shoes">鞋子</option>
+        </select>
+        <input id="itemImage" type="file" accept="image/*" multiple class="px-3 py-2 border rounded-md bg-white dark:bg-secondary-dark/80" />
+        <button id="addBtn" type="button" class="px-4 py-2 bg-primary text-white rounded-md hover:opacity-90">上傳</button>
+      </div>
+    </form>
+
+    <div id="gallery" class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+  </section>
+
+  <script>
+    (function(){
+      const storageKey = 'wardrobeItems_v1';
+      let items = [];
+
+      const el = {
+        name: document.getElementById('itemName'),
+        category: document.getElementById('itemCategory'),
+        image: document.getElementById('itemImage'),
+        addBtn: document.getElementById('addBtn'),
+        gallery: document.getElementById('gallery')
+      };
+
+      function loadItems(){
+        try{
+          const raw = localStorage.getItem(storageKey);
+          items = raw ? JSON.parse(raw) : [];
+        }catch(e){ items = []; }
+      }
+
+      function saveItems(){
+        localStorage.setItem(storageKey, JSON.stringify(items));
+      }
+
+      function render(){
+        el.gallery.innerHTML = '';
+        if(!items.length){
+          el.gallery.innerHTML = '<p class="text-sm text-subtle-light dark:text-subtle-dark">目前沒有衣物，請使用上方表單上傳圖片。</p>';
+          return;
+        }
+        items.forEach(item => {
+          const card = document.createElement('div');
+          card.className = 'bg-white dark:bg-secondary-dark/80 rounded-md p-2 shadow-sm flex flex-col items-center text-center';
+          const img = document.createElement('img');
+          img.src = item.dataUrl;
+          img.alt = item.name || item.filename || '衣物圖片';
+          img.className = 'w-full h-36 object-cover rounded-md mb-2';
+          const title = document.createElement('div');
+          title.className = 'text-sm font-medium';
+          title.textContent = item.name || item.filename;
+          const meta = document.createElement('div');
+          meta.className = 'text-xs text-subtle-light dark:text-subtle-dark';
+          meta.textContent = item.category || '';
+          card.appendChild(img);
+          card.appendChild(title);
+          card.appendChild(meta);
+          el.gallery.appendChild(card);
+        });
+      }
+
+      function handleFiles(files){
+        const fileList = Array.from(files);
+        if(!fileList.length) return;
+
+        let remaining = fileList.length;
+        fileList.forEach(file => {
+          const reader = new FileReader();
+          reader.onload = function(e){
+            const dataUrl = e.target.result;
+            const entry = {
+              id: Date.now() + Math.random(),
+              filename: file.name,
+              name: el.name.value.trim() || file.name,
+              category: el.category.value,
+              dataUrl
+            };
+            items.unshift(entry);
+            remaining -= 1;
+            if(remaining === 0){
+              saveItems();
+              render();
+              // reset file input and name
+              el.image.value = '';
+              el.name.value = '';
+            }
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+
+      el.addBtn.addEventListener('click', ()=>{
+        const files = el.image.files;
+        if(!files.length){
+          alert('請選擇至少一張圖片來上傳。');
+          return;
+        }
+        handleFiles(files);
+      });
+
+      // init
+      loadItems();
+      render();
+    })();
+  </script>
 </main>
 <footer class="flex flex-col gap-8 px-5 py-10 text-center bg-secondary-light/50 dark:bg-secondary-dark/50 text-subtle-light dark:text-subtle-dark">
 <div class="flex flex-wrap items-center justify-center gap-x-8 gap-y-4">
